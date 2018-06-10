@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Driver App</string>
+    <string name="send_data">Send</string>
+    <string name="response_default">Lorem ipsum</string>
+</resources>
