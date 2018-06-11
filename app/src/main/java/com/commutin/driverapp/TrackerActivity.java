@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.Handler;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -19,17 +18,14 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.EditText;
-import android.widget.TextView;
+
+import com.commutin.driverapp.Structures.ClientCoordinates;
+import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.List;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -40,30 +36,22 @@ public class TrackerActivity extends AppCompatActivity {
     private Socket mSocket;
     {
         try {
-          mSocket = IO.socket("http://10.0.2.2:3000");
+          mSocket = IO.socket("http://10.0.2.2:3001");
         } catch(URISyntaxException e) {
             e.printStackTrace();
         }
     }
 
     private Boolean tripInProgress;
-    Handler trackingHandler;
-    int trackingDelay;
-    Runnable trackingRunnable;
-    int trackingRuns;
 
     LocationManager mLocationManager;
     private final LocationListener mLocationListener = new LocationListener() {
         @Override
-        public void onLocationChanged(Location location) {
+        public void onLocationChanged(final Location location) {
             if(tripInProgress) {
-                Double[] coordinates = { location.getLatitude(), location.getLongitude() };
-                String jsonCoordinates = "Data not sent";
-                try {
-                    jsonCoordinates = new JSONArray(coordinates).toString();
-                } catch(JSONException e) {
-                    e.printStackTrace();
-                }
+                ClientCoordinates coordinates = new ClientCoordinates(location.getLatitude(),
+                                                                    location.getLongitude());
+                String jsonCoordinates = (new Gson()).toJson(coordinates);
                 mSocket.emit("location change", jsonCoordinates);
             }
         }
@@ -91,6 +79,7 @@ public class TrackerActivity extends AppCompatActivity {
 
         Intent calledIntent = getIntent();
         int driverId = calledIntent.getIntExtra("driverId", 222);
+
         mSocket.connect();
         mSocket.emit("set id", driverId);
 
@@ -149,7 +138,7 @@ public class TrackerActivity extends AppCompatActivity {
         promptGrantLocationPermission();
     }
 
-    private void startTracker() {
+    private void startTracker() throws SecurityException {
         if(hasLocationPermission()) {
             if(isLocationEnabled()) {
                 mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,

@@ -3,6 +3,7 @@ package com.commutin.driverapp;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -32,6 +33,10 @@ public class ConnectActivity extends AppCompatActivity {
 
     public void setConnectionId(View view) {
         String driverId = mClientIdField.getText().toString();
+
+        if(driverId == null || TextUtils.isEmpty(driverId)) {
+            return;
+        }
 
         Intent intent = new Intent(this, TrackerActivity.class);
         intent.putExtra("driverId", Integer.parseInt(driverId));
