@@ -4,21 +4,21 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".TrackerActivity">
+    tools:context=".ConnectActivity">
 
     <EditText
-        android:id="@+id/et_send_data"
+        android:id="@+id/et_client_id"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Send data to server"
+        android:inputType="number"
+        android:hint="Enter your client id"
         android:textSize="22sp" />
 
-    <TextView
-        android:id="@+id/tv_get_response"
+    <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:text="@string/response_default"
-        android:textSize="22sp" />
+        android:text="@string/connect_button_text"
+        android:onClick="setConnectionId" />
 
 </LinearLayout>

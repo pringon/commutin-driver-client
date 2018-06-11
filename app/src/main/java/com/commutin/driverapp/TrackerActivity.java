@@ -1,8 +1,20 @@
 package com.commutin.driverapp;
 
+import android.Manifest;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Handler;
+import android.provider.Settings;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -10,9 +22,14 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.socket.client.IO;
 import io.socket.client.Socket;
@@ -20,28 +37,50 @@ import io.socket.emitter.Emitter;
 
 public class TrackerActivity extends AppCompatActivity {
 
-    private String ACTIVITY_TAG = "tracker";
-
-    private EditText mSendDataEditField;
-    private TextView mGetResponseTextView;
-
     private Socket mSocket;
     {
-        try{
-            mSocket = IO.socket("http://10.0.2.2:3000");
-        } catch (URISyntaxException e) {}
+        try {
+          mSocket = IO.socket("http://10.0.2.2:3000");
+        } catch(URISyntaxException e) {
+            e.printStackTrace();
+        }
     }
 
-    private Emitter.Listener onResponse = new Emitter.Listener() {
+    private Boolean tripInProgress;
+    Handler trackingHandler;
+    int trackingDelay;
+    Runnable trackingRunnable;
+    int trackingRuns;
+
+    LocationManager mLocationManager;
+    private final LocationListener mLocationListener = new LocationListener() {
         @Override
-        public void call(final Object... args) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    String data = args[0].toString();
-                    mGetResponseTextView.setText(data);
+        public void onLocationChanged(Location location) {
+            if(tripInProgress) {
+                Double[] coordinates = { location.getLatitude(), location.getLongitude() };
+                String jsonCoordinates = "Data not sent";
+                try {
+                    jsonCoordinates = new JSONArray(coordinates).toString();
+                } catch(JSONException e) {
+                    e.printStackTrace();
                 }
-            });
+                mSocket.emit("location change", jsonCoordinates);
+            }
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String provider) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {
+
         }
     };
 
@@ -50,29 +89,89 @@ public class TrackerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracker);
 
-        mSendDataEditField = findViewById(R.id.et_send_data);
-        mGetResponseTextView = findViewById(R.id.tv_get_response);
-
-        mSocket.on("response", onResponse);
+        Intent calledIntent = getIntent();
+        int driverId = calledIntent.getIntExtra("driverId", 222);
         mSocket.connect();
-        mSocket.emit("set id","5044");
+        mSocket.emit("set id", driverId);
+
+        mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        tripInProgress = false;
+        startTracker();
+
+    }
+
+    private boolean hasLocationPermission() {
+        int locationPermission = ContextCompat.checkSelfPermission(this,
+                            Manifest.permission.ACCESS_FINE_LOCATION);
+        if(locationPermission == PackageManager.PERMISSION_GRANTED) {
+            return true;
+        }
+        return false;
+    }
+
+    private void promptGrantLocationPermission() {
+        ArrayList<String> requiredPermissions = new ArrayList<>();
+        requiredPermissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        ActivityCompat.requestPermissions(this, requiredPermissions.toArray(new String[requiredPermissions.size()]),
+                1);
+    }
+
+    private boolean isLocationEnabled() {
+        return mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+    }
+
+    private void promptEnableLocation() {
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+        dialog.setMessage(this.getResources().getString(R.string.enable_location_prompt_message));
+        dialog.setPositiveButton(this.getResources().getString(R.string.enable_location_prompt_button),
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent locationIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivity(locationIntent);
+                    }
+                });
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
-        mSocket.disconnect();
-        mSocket.off("response", onResponse);
-    }
-
-    private void sendData() {
-        String dataToBeSent = mSendDataEditField.getText().toString().trim();
-        if(TextUtils.isEmpty(dataToBeSent)) {
+        Log.i("TRACKER", "Attempting to get location");
+        if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if(isLocationEnabled()) {
+                startTracker();
+                return;
+            }
+            promptEnableLocation();
+            startTracker();
             return;
         }
+        promptGrantLocationPermission();
+    }
 
-        mSocket.emit("send data", dataToBeSent);
+    private void startTracker() {
+        if(hasLocationPermission()) {
+            if(isLocationEnabled()) {
+                mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                        100, 0, mLocationListener);
+                return;
+            }
+            promptEnableLocation();
+            startTracker();
+        }
+        promptGrantLocationPermission();
+    }
+
+    private void startTrip() {
+        if(!tripInProgress) {
+            tripInProgress = true;
+        }
+    }
+
+    private void endTrip() {
+        if(tripInProgress) {
+            tripInProgress = false;
+        }
     }
 
     @Override
@@ -85,10 +184,17 @@ public class TrackerActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int clickedItemId = item.getItemId();
-        if(clickedItemId == R.id.send_data) {
-            sendData();
-            return true;
+        switch(clickedItemId) {
+
+            case R.id.start_trip:
+                startTrip();
+                return true;
+
+            case R.id.end_trip:
+                endTrip();
+                return true;
         }
+
         return super.onOptionsItemSelected(item);
     }
 }

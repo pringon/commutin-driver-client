@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">Driver App</string>
-    <string name="send_data">Send</string>
+    <string name="start_trip">Start</string>
+    <string name="end_trip">Stop</string>
+    <string name="connect_button_text">Connect</string>
+    <string name="socket_host">http://10.0.2.2:3000</string>
+    <string name="enable_location_prompt_message">Location is not enabled</string>
+    <string name="enable_location_prompt_button">Enable location</string>
     <string name="response_default">Lorem ipsum</string>
 </resources>
