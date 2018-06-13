@@ -22,6 +22,7 @@ import android.view.MenuItem;
 import com.commutin.driverapp.Structures.ClientCoordinates;
 import com.commutin.driverapp.Structures.ConnectionData;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -73,23 +74,40 @@ public class TrackerActivity extends AppCompatActivity {
         }
     };
 
+    private final Emitter.Listener connectionListener = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            TrackerActivity.this.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if((boolean)args[0]) {
+                        mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+                        tripInProgress = false;
+                        startTracker();
+                    } else {
+                        Intent connectionErrorIntent = new Intent(TrackerActivity.this, ConnectActivity.class);
+                        connectionErrorIntent.putExtra("errorType", "connectionError");
+                        startActivity(connectionErrorIntent);
+                    }
+                }
+            });
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracker);
 
-        Intent calledIntent = getIntent();
-        int driverId = calledIntent.getIntExtra("driverId", 404);
-        int routeId  = calledIntent.getIntExtra("routeId", 404);
+        Intent callerIntent = getIntent();
+        int driverId = callerIntent.getIntExtra("driverId", 404);
+        int routeId  = callerIntent.getIntExtra("routeId", 404);
 
+        mSocket.on("set id response", connectionListener);
         mSocket.connect();
         ConnectionData sendIds = new ConnectionData(driverId, routeId);
         String jsonSendIds = (new Gson()).toJson(sendIds);
         mSocket.emit("set id", jsonSendIds);
-
-        mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        tripInProgress = false;
-        startTracker();
 
     }
 

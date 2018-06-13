@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import java.net.URISyntaxException;
 
@@ -15,6 +16,8 @@ import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
 
 public class ConnectActivity extends AppCompatActivity {
+
+    private TextView mErrorMessageTextView;
 
     private EditText mClientIdField;
 
@@ -25,13 +28,22 @@ public class ConnectActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_connect);
 
-        mClientIdField = findViewById(R.id.et_client_id);
-        mRouteIdField  = findViewById(R.id.et_route_id);
+        mErrorMessageTextView = findViewById(R.id.tv_error_message);
+        mClientIdField        = findViewById(R.id.et_client_id);
+        mRouteIdField         = findViewById(R.id.et_route_id);
+
+        showErrors();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    private void showErrors() {
+        Intent callerIntent = getIntent();
+        if(callerIntent.hasExtra("errorType")) {
+            String errorType = callerIntent.getStringExtra("errorType").toString();
+            if(errorType.equals("connectionError")) {
+                mErrorMessageTextView.setText("There was an error connecting to the server. Please try again");
+                mErrorMessageTextView.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     public void setConnectionId(View view) {
