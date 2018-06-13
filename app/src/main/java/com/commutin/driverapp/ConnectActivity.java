@@ -18,12 +18,15 @@ public class ConnectActivity extends AppCompatActivity {
 
     private EditText mClientIdField;
 
+    private EditText mRouteIdField;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_connect);
 
         mClientIdField = findViewById(R.id.et_client_id);
+        mRouteIdField  = findViewById(R.id.et_route_id);
     }
 
     @Override
@@ -33,13 +36,18 @@ public class ConnectActivity extends AppCompatActivity {
 
     public void setConnectionId(View view) {
         String driverId = mClientIdField.getText().toString();
+        String routeId  = mRouteIdField.getText().toString();
 
         if(driverId == null || TextUtils.isEmpty(driverId)) {
+            return;
+        }
+        if(routeId == null || TextUtils.isEmpty(routeId)) {
             return;
         }
 
         Intent intent = new Intent(this, TrackerActivity.class);
         intent.putExtra("driverId", Integer.parseInt(driverId));
+        intent.putExtra("routeId", Integer.parseInt(routeId));
         startActivity(intent);
     }
 }

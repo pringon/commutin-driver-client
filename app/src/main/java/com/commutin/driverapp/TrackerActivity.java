@@ -20,6 +20,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 
 import com.commutin.driverapp.Structures.ClientCoordinates;
+import com.commutin.driverapp.Structures.ConnectionData;
 import com.google.gson.Gson;
 
 import org.json.JSONArray;
@@ -78,10 +79,13 @@ public class TrackerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_tracker);
 
         Intent calledIntent = getIntent();
-        int driverId = calledIntent.getIntExtra("driverId", 222);
+        int driverId = calledIntent.getIntExtra("driverId", 404);
+        int routeId  = calledIntent.getIntExtra("routeId", 404);
 
         mSocket.connect();
-        mSocket.emit("set id", driverId);
+        ConnectionData sendIds = new ConnectionData(driverId, routeId);
+        String jsonSendIds = (new Gson()).toJson(sendIds);
+        mSocket.emit("set id", jsonSendIds);
 
         mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         tripInProgress = false;
